@@ -1,6 +1,10 @@
 
-import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { OpenAIStream, StreamingTextResponse } from 'ai';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export const maxDuration = 30;
 
@@ -17,16 +21,15 @@ export async function POST(req: Request) {
     const { messages, id } = await req.json();
     console.log('Received request:', { id, messageCount: messages.length });
 
-    const result = await streamText({
-      model: openai('gpt-3.5-turbo'),
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
       messages,
       temperature: 0.7,
-      async onFinish({ text, usage, finishReason }) {
-        console.log('Chat completed:', { text, usage, finishReason });
-      },
+      stream: true,
     });
 
-    return result.toDataStreamResponse();
+    const stream = OpenAIStream(response);
+    return new StreamingTextResponse(stream);
   } catch (error) {
     console.error('Error in chat route:', error);
     return new Response(
