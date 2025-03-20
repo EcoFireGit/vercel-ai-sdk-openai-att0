@@ -1,5 +1,5 @@
 
-import { OpenAIStream, StreamingTextResponse } from 'ai';
+import { StreamingTextResponse } from 'ai';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -28,8 +28,7 @@ export async function POST(req: Request) {
       stream: true,
     });
 
-    const stream = OpenAIStream(response);
-    return new StreamingTextResponse(stream);
+    return new StreamingTextResponse(response);
   } catch (error) {
     console.error('Error in chat route:', error);
     return new Response(
