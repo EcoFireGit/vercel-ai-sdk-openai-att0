@@ -1,68 +1,56 @@
 'use client';
 
-import { useChat } from '@ai-sdk/react';
+import { useChat, useCompletion } from '@ai-sdk/react';
+import { useState } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 
 export default function Chat() {
-  const {
-    error,
-    input,
-    status,
-    handleInputChange,
-    handleSubmit,
-    messages,
-    reload,
-    stop,
-  } = useChat({
-    onFinish(message, { usage, finishReason }) {
-      console.log('Usage', usage);
-      console.log('FinishReason', finishReason);
-    },
+  const [chatMessage, setChatMessage] = useState('');
+
+  // Use useChat for the main chat functionality
+  const { messages, input, setInput, handleSubmit, handleInputChange } = useChat();
+
+  // Use useCompletion for auto-completion
+  const { complete, completion } = useCompletion({
+    api: '/api/completion',
   });
 
+  const generateCompletion = useDebouncedCallback((e) => {
+    complete(chatMessage);
+  }, 500);
+
+  const handleChatInputChange = (e) => {
+    setChatMessage(e.target.value);
+    handleInputChange(e);
+  };
+
+  const handleChatSubmit = (e) => {
+    handleSubmit(e);
+    setChatMessage('');
+  };
+
   return (
-    <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
-      {messages.map(m => (
-        <div key={m.id} className="whitespace-pre-wrap">
-          {m.role === 'user' ? 'User: ' : 'AI: '}
-          {m.content}
-        </div>
-      ))}
-
-      {(status === 'submitted' || status === 'streaming') && (
-        <div className="mt-4 text-gray-500">
-          {status === 'submitted' && <div>Loading...</div>}
-          <button
-            type="button"
-            className="px-4 py-2 mt-4 text-blue-500 border border-blue-500 rounded-md"
-            onClick={stop}
-          >
-            Stop
-          </button>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-4">
-          <div className="text-red-500">An error occurred.</div>
-          <button
-            type="button"
-            className="px-4 py-2 mt-4 text-blue-500 border border-blue-500 rounded-md"
-            onClick={() => reload()}
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <input
-          className="fixed bottom-0 w-full max-w-md p-2 mb-8 border border-gray-300 rounded shadow-xl"
-          value={input}
-          placeholder="Say something..."
-          onChange={handleInputChange}
-          disabled={status !== 'ready'}
-        />
-      </form>
+    <div className="chat">
+      <h1>Welcome to the AI Chatbot</h1>
+      <div className="message_content">
+        {messages.map((m) => (
+          <div key={m.id}>
+            <span>{m.role === 'user' ? '👤' : '🤖'}: </span>
+            <span>{m.content}</span>
+          </div>
+        ))}
+      </div>
+      <div className="text_area">
+        <form onSubmit={(e) => handleChatSubmit(e)}>
+          <input
+            value={input}
+            placeholder="Say something..."
+            onChange={(e) => handleChatInputChange(e)}
+          />
+        </form>
+        <button onClick={generateCompletion}>Generate completion</button>
+        <div>{completion}</div>
+      </div>
     </div>
   );
 }
